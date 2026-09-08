@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>BBNBENEF</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #0a0a0f; --card: #15151e; --card2: #1a1a26;
+  --border: rgba(255,255,255,0.08);
+  --accent: #c8f542; --accent2: #42f5c8; --accent3: #f542a8;
+  --text: #f0f0f8; --muted: #6b6b82;
+  --profit: #c8f542; --loss: #f54242; --gold: #f5c842;
+  --safe-bottom: env(safe-area-inset-bottom, 0px); --nav-h: 68px;
+}
+html { height: 100%; }
+body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100%; overflow-x: hidden; padding-bottom: calc(var(--nav-h) + var(--safe-bottom)); position: relative; }
+body::before { content:''; position:fixed; inset:0; background-image: linear-gradient(rgba(200,245,66,0.025) 1px,transparent 1px), linear-gradient(90deg,rgba(200,245,66,0.025) 1px,transparent 1px); background-size:32px 32px; pointer-events:none; z-index:0; }
+.blob { position:fixed; border-radius:50%; filter:blur(80px); opacity:0.08; pointer-events:none; z-index:0; animation:drift 14s ease-in-out infinite alternate; }
+.blob-1 { width:280px; height:280px; background:var(--accent); top:-60px; right:-60px; }
+.blob-2 { width:220px; height:220px; background:var(--accent2); bottom:80px; left:-60px; animation-delay:-7s; }
+@keyframes drift { from{transform:translate(0,0) scale(1);}to{transform:translate(20px,15px) scale(1.06);} }
+.page { display:none; min-height:calc(100vh - var(--nav-h)); padding:0 0 24px; position:relative; z-index:1; }
+.page.active { display:block; animation:fadeUp .3s ease both; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+
+/* ── LOGIN SCREEN ── */
+#login-screen {
+  position:fixed; inset:0; z-index:500;
+  background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:32px 24px; gap:0;
+}
+#login-screen.hidden { display:none; }
+.login-logo { font-size:48px; font-weight:800; letter-spacing:-3px; margin-bottom:6px; }
+.login-logo span { color:var(--accent); }
+.login-tag { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:4px; text-transform:uppercase; color:var(--muted); margin-bottom:48px; }
+.login-card { background:var(--card); border:1px solid var(--border); border-radius:24px; padding:32px 24px; width:100%; max-width:360px; display:flex; flex-direction:column; gap:16px; }
+.login-title { font-size:18px; font-weight:800; margin-bottom:4px; text-align:center; }
+.login-sub { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); text-align:center; letter-spacing:1.5px; line-height:1.8; margin-bottom:8px; }
+.google-btn { display:flex; align-items:center; justify-content:center; gap:12px; background:#fff; color:#1a1a1a; border:none; border-radius:14px; padding:16px 20px; font-family:'Syne',sans-serif; font-size:15px; font-weight:700; cursor:pointer; transition:all .2s; width:100%; }
+.google-btn:active { background:#f0f0f0; transform:scale(.98); }
+.google-btn svg { flex-shrink:0; }
+.login-note { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); text-align:center; letter-spacing:1px; line-height:1.8; }
+
+/* ── SYNC STATUS BAR ── */
+.sync-bar { display:flex; align-items:center; gap:8px; padding:8px 14px; background:rgba(200,245,66,0.05); border-bottom:1px solid var(--border); font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:1px; }
+.sync-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; background:var(--muted); }
+.sync-dot.synced { background:var(--accent); }
+.sync-dot.syncing { background:var(--gold); animation:pulse 1s ease-in-out infinite; }
+.sync-dot.error { background:var(--loss); }
+.sync-user { margin-left:auto; color:var(--accent2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px; }
+.signout-btn { background:none; border:none; color:var(--muted); font-family:'DM Mono',monospace; font-size:9px; cursor:pointer; padding:2px 6px; border-radius:4px; letter-spacing:1px; flex-shrink:0; }
+.signout-btn:active { color:var(--loss); }
+
+/* ── HEADER ── */
+.app-header { position:sticky; top:0; z-index:50; background:rgba(10,10,15,0.92); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:14px 18px 12px; display:flex; align-items:center; justify-content:space-between; }
+.logo-wrap { display:flex; flex-direction:column; gap:1px; }
+.logo-tag { font-family:'DM Mono',monospace; font-size:9px; color:var(--accent); letter-spacing:3px; text-transform:uppercase; }
+.logo-title { font-size:22px; font-weight:800; letter-spacing:-1px; line-height:1; }
+.logo-title span { color:var(--accent); }
+.header-right { display:flex; align-items:center; gap:8px; }
+.pulse-wrap { display:flex; align-items:center; gap:6px; font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1px; }
+.pulse-dot { width:6px; height:6px; background:var(--accent); border-radius:50%; animation:pulse 2s ease-in-out infinite; flex-shrink:0; }
+@keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(200,245,66,.4);}50%{opacity:.7;box-shadow:0 0 0 5px rgba(200,245,66,0);} }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:100; background:rgba(10,10,15,0.95); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-top:1px solid var(--border); display:flex; padding-bottom:var(--safe-bottom); height:calc(var(--nav-h) + var(--safe-bottom)); }
+.nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:none; border:none; color:var(--muted); cursor:pointer; padding:8px 4px; transition:color .2s; min-height:60px; position:relative; }
+.nav-btn.active { color:var(--accent); }
+.nav-btn .nav-icon { font-size:20px; transition:transform .2s; }
+.nav-btn.active .nav-icon { transform:scale(1.15); }
+.nav-btn .nav-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; }
+.nav-badge { position:absolute; top:6px; right:calc(50% - 14px); background:var(--accent3); color:#fff; font-size:9px; font-weight:700; border-radius:99px; padding:1px 5px; min-width:16px; text-align:center; }
+
+/* ── SECTION TITLE ── */
+.section-head { padding:20px 18px 0; margin-bottom:16px; }
+.section-head h2 { font-size:20px; font-weight:800; letter-spacing:-.5px; }
+.section-head p { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:3px; }
+
+/* ── CARDS ── */
+.card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:18px; margin:0 14px 14px; }
+.card-title { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+
+/* ── KPI GRID ── */
+.kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 14px 14px; }
+.kpi-cell { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px 14px; }
+.kpi-cell.hi-green { border-color:rgba(200,245,66,.2); background:linear-gradient(135deg,rgba(200,245,66,.07) 0%,var(--card) 70%); }
+.kpi-cell.hi-cyan  { border-color:rgba(66,245,200,.2); }
+.kpi-cell.hi-red   { border-color:rgba(245,66,66,.2); background:linear-gradient(135deg,rgba(245,66,66,.07) 0%,var(--card) 70%); }
+.kpi-lbl { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.kpi-val { font-size:22px; font-weight:800; letter-spacing:-.5px; line-height:1; }
+.kpi-val.green { color:var(--profit); } .kpi-val.red { color:var(--loss); } .kpi-val.cyan { color:var(--accent2); } .kpi-val.white { color:var(--text); }
+.kpi-sub { margin-top:4px; font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); line-height:1.3; }
+
+/* ── PRICE INPUTS ── */
+.price-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 14px 10px; }
+.price-box { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; position:relative; overflow:hidden; transition:border-color .2s; }
+.price-box.buy-box { border-color:rgba(200,245,66,.15); }
+.price-box.sell-box { border-color:rgba(66,245,200,.15); }
+.price-top { display:flex; align-items:center; gap:6px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; }
+.buy-box .price-top { color:rgba(200,245,66,.8); } .sell-box .price-top { color:rgba(66,245,200,.8); }
+.price-icon { width:18px; height:18px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; }
+.buy-box .price-icon { background:rgba(200,245,66,.1); color:var(--accent); } .sell-box .price-icon { background:rgba(66,245,200,.1); color:var(--accent2); }
+.price-input { width:100%; background:none; border:none; outline:none; font-family:'Syne',sans-serif; font-size:26px; font-weight:800; color:var(--text); caret-color:var(--accent); -moz-appearance:textfield; }
+.price-input::-webkit-inner-spin-button,.price-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+.price-input::placeholder { color:rgba(255,255,255,.12); }
+.price-bar { position:absolute; top:0; left:0; right:0; height:2px; opacity:0; transition:opacity .3s; }
+.buy-box .price-bar { background:linear-gradient(90deg,transparent,var(--accent),transparent); }
+.sell-box .price-bar { background:linear-gradient(90deg,transparent,var(--accent2),transparent); }
+.mini-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin:0 14px 14px; }
+.mini-box { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; }
+.mini-lbl { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.mini-input { width:100%; background:none; border:none; outline:none; font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--text); -moz-appearance:textfield; }
+.mini-input::-webkit-inner-spin-button,.mini-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+.mini-input::placeholder { color:rgba(255,255,255,.12); }
+
+/* ── BAR ── */
+.bar-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:18px; margin:0 14px 14px; }
+.bar-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.bar-label { font-size:15px; font-weight:700; }
+.bar-pct { font-size:32px; font-weight:800; letter-spacing:-1.5px; transition:color .3s; }
+.bar-track { width:100%; height:8px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; margin-bottom:10px; }
+.bar-fill { height:100%; border-radius:99px; transition:width .6s cubic-bezier(.34,1.56,.64,1),background .4s; }
+.bar-status { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+.bar-legend { display:flex; justify-content:space-between; font-family:'DM Mono',monospace; font-size:9px; color:rgba(107,107,130,.5); margin-top:8px; }
+
+/* ── BREAKDOWN ── */
+.bd-row { display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--border); }
+.bd-row:last-child { border-bottom:none; }
+.bd-key { font-size:13px; color:var(--muted); display:flex; align-items:center; gap:8px; }
+.dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.bd-val { font-weight:700; font-size:14px; }
+.score-row { display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-bottom:1px solid var(--border); }
+.score-row:last-child { border-bottom:none; }
+.score-key { font-size:13px; color:var(--muted); }
+.score-val { font-weight:800; font-size:17px; }
+.pill { display:inline-flex; align-items:center; padding:3px 10px; border-radius:99px; font-family:'DM Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.5px; }
+.pill.good { background:rgba(200,245,66,.12); color:var(--accent); border:1px solid rgba(200,245,66,.2); }
+.pill.bad { background:rgba(245,66,66,.12); color:var(--loss); border:1px solid rgba(245,66,66,.2); }
+.pill.neutral { background:rgba(66,245,200,.1); color:var(--accent2); border:1px solid rgba(66,245,200,.15); }
+
+/* ── SIM TABLE ── */
+.sim-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.sim-tbl { width:100%; border-collapse:collapse; font-family:'DM Mono',monospace; font-size:11px; min-width:300px; }
+.sim-tbl th { text-align:left; padding:7px 10px; color:var(--muted); font-size:9px; letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid var(--border); }
+.sim-tbl td { padding:9px 10px; border-bottom:1px solid rgba(255,255,255,.03); }
+.sim-tbl tr:last-child td { border-bottom:none; }
+.sim-tbl tr.cur td { background:rgba(200,245,66,.04); }
+
+/* ── FORM CARD ── */
+.form-card { background:var(--card); border:1px solid var(--border); border-radius:18px; margin:0 14px 14px; overflow:hidden; }
+.form-card-header { display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--border); }
+.form-card-title { font-size:15px; font-weight:700; }
+.type-toggle { display:flex; background:rgba(255,255,255,.04); border-radius:8px; padding:3px; gap:3px; }
+.type-toggle button { background:none; border:none; color:var(--muted); font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all .2s; }
+.type-toggle button.active { background:var(--accent); color:#0a0a0f; font-weight:700; }
+.form-body { padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+.photo-row { display:flex; align-items:center; gap:12px; }
+.photo-btn { width:56px; height:56px; background:rgba(255,255,255,.04); border:1.5px dashed rgba(255,255,255,.15); border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:22px; flex-shrink:0; overflow:hidden; }
+.photo-btn img { width:100%; height:100%; object-fit:cover; }
+.photo-hint { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; line-height:1.5; }
+.f-group { display:flex; flex-direction:column; gap:5px; }
+.f-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+.f-label.buy { color:rgba(200,245,66,.7); } .f-label.sell { color:rgba(66,245,200,.7); }
+.f-input { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:11px; padding:13px 14px; color:var(--text); font-family:'Syne',sans-serif; font-size:16px; font-weight:600; outline:none; width:100%; -moz-appearance:textfield; transition:border-color .2s; -webkit-appearance:none; }
+.f-input::-webkit-inner-spin-button,.f-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+.f-input::placeholder { color:rgba(255,255,255,.15); font-weight:400; }
+.f-input:focus { border-color:rgba(200,245,66,.4); }
+.f-input.buy:focus { border-color:rgba(200,245,66,.5); } .f-input.sell:focus { border-color:rgba(66,245,200,.5); }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.profit-preview { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:11px; padding:13px 14px; font-family:'DM Mono',monospace; font-size:16px; font-weight:700; min-height:50px; display:flex; align-items:center; color:var(--muted); }
+.add-btn { background:var(--accent); color:#0a0a0f; border:none; border-radius:12px; padding:16px; font-family:'DM Mono',monospace; font-size:13px; font-weight:700; cursor:pointer; width:100%; letter-spacing:1px; margin-top:4px; -webkit-appearance:none; }
+.add-btn:active { background:#d8ff55; transform:scale(.98); }
+.lot-banner { display:none; background:rgba(245,66,168,.06); border:1px solid rgba(245,66,168,.15); border-radius:10px; padding:10px 14px; font-family:'DM Mono',monospace; font-size:11px; color:var(--accent3); }
+
+/* ── BRANDS / ROWS ── */
+.brands-list { display:flex; flex-direction:column; gap:10px; margin:0 14px 14px; }
+.brand-group { border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.brand-hdr { display:flex; align-items:center; justify-content:space-between; padding:13px 14px; background:rgba(255,255,255,.02); cursor:pointer; user-select:none; }
+.brand-hdr:active { background:rgba(255,255,255,.04); }
+.brand-name-wrap { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; }
+.brand-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.brand-meta { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); text-align:right; line-height:1.5; }
+.brand-chevron { font-size:10px; color:var(--muted); transition:transform .2s; margin-left:6px; }
+.brand-group.collapsed .brand-chevron { transform:rotate(-90deg); }
+.brand-body { border-top:1px solid var(--border); }
+.brand-group.collapsed .brand-body { display:none; }
+.art-row { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid rgba(255,255,255,.03); }
+.art-row:last-child { border-bottom:none; }
+.art-thumb { width:38px; height:38px; border-radius:9px; background:rgba(255,255,255,.04); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; overflow:hidden; border:1px solid var(--border); }
+.art-thumb img { width:100%; height:100%; object-fit:cover; }
+.art-info { flex:1; min-width:0; }
+.art-name { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:5px; }
+.art-tag { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:1px; text-transform:uppercase; padding:1px 6px; border-radius:99px; flex-shrink:0; }
+.tag-a { background:rgba(66,245,200,.1); color:var(--accent2); } .tag-l { background:rgba(245,66,168,.1); color:var(--accent3); }
+.art-prices { display:flex; gap:6px; margin-top:3px; font-family:'DM Mono',monospace; font-size:10px; }
+.art-buy-price { color:rgba(200,245,66,.75); } .art-sell-price { color:var(--accent2); }
+.art-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+.art-profit { font-family:'DM Mono',monospace; font-size:12px; font-weight:700; }
+.del-btn { background:none; border:none; color:rgba(245,66,66,.4); font-size:16px; padding:4px; cursor:pointer; line-height:1; }
+.del-btn:active { color:var(--loss); }
+.revente-badge { display:inline-flex; padding:2px 7px; border-radius:99px; font-family:'DM Mono',monospace; font-size:9px; font-weight:700; white-space:nowrap; }
+.rv-record { background:rgba(245,200,66,.15); color:var(--gold); border:1px solid rgba(245,200,66,.3); }
+.rv-good { background:rgba(200,245,66,.12); color:var(--accent); border:1px solid rgba(200,245,66,.25); }
+.rv-ok { background:rgba(66,245,200,.1); color:var(--accent2); border:1px solid rgba(66,245,200,.2); }
+.rv-low { background:rgba(245,166,66,.1); color:#f5a042; border:1px solid rgba(245,166,66,.2); }
+.rv-bad { background:rgba(245,66,66,.1); color:var(--loss); border:1px solid rgba(245,66,66,.2); }
+.rv-none { background:rgba(107,107,130,.1); color:var(--muted); border:1px solid rgba(107,107,130,.2); }
+
+/* ── TOTALS ── */
+.totals-strip { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 14px 14px; }
+.total-cell { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px 14px; text-align:center; }
+.total-lbl { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+.total-val { font-size:16px; font-weight:800; letter-spacing:-.3px; }
+.inject-row { display:flex; gap:8px; margin:0 14px 14px; }
+.inject-btn { flex:1; background:rgba(200,245,66,.1); color:var(--accent); border:1px solid rgba(200,245,66,.2); border-radius:10px; padding:10px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; cursor:pointer; text-align:center; }
+.inject-btn.cyan { background:rgba(66,245,200,.08); color:var(--accent2); border-color:rgba(66,245,200,.18); }
+
+/* ── MINI STATS ── */
+.mini-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.mini-stat { background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:12px; padding:12px 14px; text-align:center; }
+.mini-stat.gold-hi { background:linear-gradient(135deg,rgba(245,200,66,.07),transparent); border-color:rgba(245,200,66,.2); }
+.ms-lbl { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.ms-val { font-size:18px; font-weight:800; }
+.ms-sub { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); margin-top:3px; }
+.empty-state { text-align:center; padding:40px 24px; color:var(--muted); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:2px; line-height:2; }
+
+/* ── RECO ── */
+.reco-list { display:flex; flex-direction:column; gap:10px; margin:0 14px 14px; }
+.reco-item { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+.reco-item.top3 { border-color:rgba(245,200,66,.25); background:linear-gradient(135deg,rgba(245,200,66,.05),var(--card)); }
+.reco-rank { font-size:22px; flex-shrink:0; width:28px; text-align:center; }
+.reco-thumb { width:46px; height:46px; border-radius:10px; background:rgba(255,255,255,.04); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; overflow:hidden; border:1px solid var(--border); }
+.reco-thumb img { width:100%; height:100%; object-fit:cover; }
+.reco-info { flex:1; min-width:0; }
+.reco-name { font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.reco-brand { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+.reco-prices { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-top:4px; }
+.reco-nums { display:flex; flex-direction:column; align-items:flex-end; gap:3px; flex-shrink:0; }
+.reco-profit { font-family:'DM Mono',monospace; font-size:15px; font-weight:700; }
+.reco-roi { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+
+/* ── STOCK ── */
+.stock-row { display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid rgba(255,255,255,.03); }
+.stock-row:last-child { border-bottom:none; }
+.stock-thumb { width:38px; height:38px; border-radius:9px; background:rgba(255,255,255,.04); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; overflow:hidden; border:1px solid var(--border); }
+.stock-thumb img { width:100%; height:100%; object-fit:cover; }
+.stock-info { flex:1; min-width:0; }
+.stock-name { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.stock-meta { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-top:2px; }
+.stock-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.sold-btn { background:rgba(200,245,66,.1); color:var(--accent); border:1px solid rgba(200,245,66,.2); border-radius:9px; padding:7px 11px; font-family:'DM Mono',monospace; font-size:10px; font-weight:700; cursor:pointer; white-space:nowrap; -webkit-appearance:none; }
+.sold-btn:active { background:var(--accent); color:#0a0a0f; }
+
+/* ── MODAL ── */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:200; display:none; align-items:flex-end; justify-content:center; padding-bottom:var(--safe-bottom); }
+.modal-overlay.open { display:flex; }
+.modal-sheet { background:#1a1a26; border:1px solid var(--border); border-radius:24px 24px 0 0; padding:24px 20px 32px; width:100%; animation:slideUp .28s ease both; }
+@keyframes slideUp { from{transform:translateY(100%);}to{transform:translateY(0);} }
+.modal-handle { width:36px; height:4px; background:rgba(255,255,255,.15); border-radius:99px; margin:0 auto 20px; }
+.modal-title { font-size:18px; font-weight:800; margin-bottom:6px; }
+.modal-sub { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-bottom:20px; letter-spacing:1px; }
+.modal-lbl { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; display:block; }
+.modal-input { width:100%; background:rgba(255,255,255,.05); border:1.5px solid var(--border); border-radius:14px; padding:16px; color:var(--text); font-family:'Syne',sans-serif; font-size:22px; font-weight:800; outline:none; margin-bottom:20px; -moz-appearance:textfield; -webkit-appearance:none; }
+.modal-input::-webkit-inner-spin-button,.modal-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+.modal-input:focus { border-color:rgba(66,245,200,.5); }
+.modal-btns { display:grid; grid-template-columns:1fr 2fr; gap:10px; }
+.modal-cancel { background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:16px; font-family:'DM Mono',monospace; font-size:12px; cursor:pointer; -webkit-appearance:none; }
+.modal-cancel:active { color:var(--loss); }
+.modal-confirm { background:var(--accent2); color:#0a0a0f; border:none; border-radius:12px; padding:16px; font-family:'DM Mono',monospace; font-size:13px; font-weight:700; cursor:pointer; -webkit-appearance:none; }
+.modal-confirm:active { background:#55ffda; }
+</style>
+</head>
+<body>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<!-- ══ ÉCRAN DE CONNEXION ══ -->
+<div id="login-screen">
+  <div class="login-logo">BBN<span>BENEF</span></div>
+  <div class="login-tag">// Dashboard bénéfices</div>
+  <div class="login-card">
+    <div class="login-title">Connexion</div>
+    <div class="login-sub">Tes données sont synchronisées<br>en temps réel sur tous tes appareils</div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.32-8.16 2.32-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Continuer avec Google
+    </button>
+    <div class="login-note">Gratuit · Sécurisé · Sync automatique<br>PC ↔ iPhone ↔ Tablette</div>
+  </div>
+</div>
+
+<!-- ══ MODAL VENDRE ══ -->
+<div class="modal-overlay" id="sell-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💶 Marquer comme vendu</div>
+    <div class="modal-sub" id="modal-item-name">—</div>
+    <label class="modal-lbl">Prix de vente (€)</label>
+    <input class="modal-input" type="number" id="modal-sell-price" placeholder="0.00" min="0" step="0.01" inputmode="decimal">
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Annuler</button>
+      <button class="modal-confirm" onclick="confirmSell()">✓ Vendu !</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<div class="app-header">
+  <div class="logo-wrap">
+    <div class="logo-tag">// Dashboard</div>
+    <div class="logo-title">BBN<span>BENEF</span></div>
+  </div>
+  <div class="header-right">
+    <div class="pulse-wrap"><div class="pulse-dot"></div>LIVE</div>
+  </div>
+</div>
+
+<!-- SYNC BAR -->
+<div class="sync-bar" id="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-label">Connexion…</span>
+  <span class="sync-user" id="sync-user"></span>
+  <button class="signout-btn" onclick="signOut()">Déconnexion</button>
+</div>
+
+<!-- ══════ PAGE STATS ══════ -->
+<div class="page active" id="page-stats">
+  <div class="section-head" style="padding-top:16px;"><h2>Calculateur</h2><p>Calcul en temps réel</p></div>
+  <div class="price-row">
+    <div class="price-box buy-box">
+      <div class="price-bar" id="buy-bar"></div>
+      <div class="price-top"><div class="price-icon">↓</div>Achat</div>
+      <input class="price-input" type="number" id="buyPrice" placeholder="0.00" inputmode="decimal" min="0" step="0.01" oninput="calculate();document.getElementById('buy-bar').style.opacity='1';this.closest('.price-box').style.borderColor='rgba(200,245,66,.35)'">
+    </div>
+    <div class="price-box sell-box">
+      <div class="price-bar" id="sell-bar"></div>
+      <div class="price-top"><div class="price-icon">↑</div>Vente</div>
+      <input class="price-input" type="number" id="sellPrice" placeholder="0.00" inputmode="decimal" min="0" step="0.01" oninput="calculate();document.getElementById('sell-bar').style.opacity='1';this.closest('.price-box').style.borderColor='rgba(66,245,200,.35)'">
+    </div>
+  </div>
+  <div class="mini-row">
+    <div class="mini-box"><div class="mini-lbl">Qté #</div><input class="mini-input" type="number" id="quantity" placeholder="1" value="1" min="1" inputmode="numeric" oninput="calculate()"></div>
+    <div class="mini-box"><div class="mini-lbl">TVA %</div><input class="mini-input" type="number" id="tva" placeholder="20" value="20" min="0" max="100" inputmode="decimal" oninput="calculate()"></div>
+    <div class="mini-box"><div class="mini-lbl">Frais €</div><input class="mini-input" type="number" id="fees" placeholder="0" min="0" step="0.01" inputmode="decimal" oninput="calculate()"></div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-cell hi-green" id="card-profit"><div class="kpi-lbl">Bénéfice net</div><div class="kpi-val green" id="kpi-profit">—</div><div class="kpi-sub" id="kpi-profit-unit">par unité</div></div>
+    <div class="kpi-cell hi-cyan"><div class="kpi-lbl">Chiffre d'affaires</div><div class="kpi-val cyan" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub">total</div></div>
+    <div class="kpi-cell"><div class="kpi-lbl">Coût total</div><div class="kpi-val white" id="kpi-cost">—</div><div class="kpi-sub" id="kpi-cost-sub">achat + frais</div></div>
+    <div class="kpi-cell"><div class="kpi-lbl">TVA collectée</div><div class="kpi-val white" id="kpi-tva">—</div><div class="kpi-sub" id="kpi-tva-sub">à reverser</div></div>
+  </div>
+  <div class="bar-card">
+    <div class="bar-top"><div class="bar-label">Marge brute</div><div class="bar-pct" id="bar-pct">—</div></div>
+    <div class="bar-track"><div class="bar-fill" id="bar-fill" style="width:0%;background:var(--accent)"></div></div>
+    <div class="bar-status" id="bar-status">—</div>
+    <div class="bar-legend"><span>0%</span><span>&lt;15%</span><span>15–40%</span><span>&gt;40%</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Ventilation / unité</div>
+    <div class="bd-row"><span class="bd-key"><span class="dot" style="background:var(--accent2)"></span>Prix vente HT</span><span class="bd-val" style="color:var(--accent2)" id="b-sellht">—</span></div>
+    <div class="bd-row"><span class="bd-key"><span class="dot" style="background:var(--muted)"></span>Prix achat</span><span class="bd-val" style="color:var(--muted)" id="b-buy">—</span></div>
+    <div class="bd-row"><span class="bd-key"><span class="dot" style="background:var(--accent3)"></span>Frais/unité</span><span class="bd-val" style="color:var(--accent3)" id="b-fees">—</span></div>
+    <div class="bd-row"><span class="bd-key"><span class="dot" style="background:var(--accent)"></span>Bénéfice net</span><span class="bd-val" id="b-profit">—</span></div>
+    <div class="bd-row"><span class="bd-key"><span class="dot" style="background:#f5a042"></span>TVA/unité</span><span class="bd-val" style="color:#f5a042" id="b-tva">—</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Score &amp; Analyse</div>
+    <div class="score-row"><span class="score-key">Rentabilité</span><span id="score-rentabilite" class="pill neutral">—</span></div>
+    <div class="score-row"><span class="score-key">Coeff. multiplicateur</span><span class="score-val" id="score-coeff">—</span></div>
+    <div class="score-row"><span class="score-key">Point mort</span><span class="score-val" id="score-breakeven" style="color:var(--accent2)">—</span></div>
+    <div class="score-row"><span class="score-key">ROI</span><span class="score-val" id="score-roi">—</span></div>
+    <div class="score-row"><span class="score-key">Statut global</span><span id="score-status" class="pill neutral">—</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Simulation multi-quantités</div>
+    <div class="sim-wrap">
+      <table class="sim-tbl">
+        <thead><tr><th>Qté</th><th>Revenu</th><th>Coût</th><th>Bénéf.</th><th>Marge</th></tr></thead>
+        <tbody id="sim-body"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px;font-family:'DM Mono',monospace;font-size:10px;">Entrez vos prix</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ PAGE ARTICLES ══════ -->
+<div class="page" id="page-articles">
+  <div class="form-card" style="margin-top:14px;">
+    <div class="form-card-header">
+      <div class="form-card-title">➕ Ajouter un article</div>
+      <div class="type-toggle">
+        <button id="btn-article" class="active" onclick="setMode('article')">Article</button>
+        <button id="btn-lot" onclick="setMode('lot')">Lot</button>
+      </div>
+    </div>
+    <div class="form-body">
+      <div class="lot-banner" id="lot-banner">📦 Mode Lot — tous les articles ajoutés forment un lot.</div>
+      <div class="photo-row">
+        <div class="photo-btn" id="art-photo-btn" onclick="document.getElementById('art-photo-input').click()">📷</div>
+        <input type="file" id="art-photo-input" accept="image/*" style="display:none;" onchange="handleArtPhoto(event)">
+        <div class="photo-hint">Appuyer pour<br>ajouter une photo</div>
+      </div>
+      <div class="f-group"><div class="f-label">Nom de l'article</div><input class="f-input" type="text" id="art-name" placeholder="ex : T-Shirt oversize" autocomplete="off"></div>
+      <div class="f-group"><div class="f-label">Marque</div><input class="f-input" type="text" id="art-brand" placeholder="ex : Nike" autocomplete="off"></div>
+      <div class="two-col">
+        <div class="f-group"><div class="f-label buy">↓ Prix achat (€)</div><input class="f-input buy" type="number" id="art-buy" placeholder="0.00" min="0" step="0.01" inputmode="decimal" oninput="updateFormProfit()"></div>
+        <div class="f-group"><div class="f-label sell">↑ Prix vente (€)</div><input class="f-input sell" type="number" id="art-sell" placeholder="0.00" min="0" step="0.01" inputmode="decimal" oninput="updateFormProfit()"></div>
+      </div>
+      <div class="two-col">
+        <div class="f-group"><div class="f-label">Quantité</div><input class="f-input" type="number" id="art-qty" placeholder="1" min="1" value="1" inputmode="numeric" oninput="updateFormProfit()"></div>
+        <div class="f-group"><div class="f-label">Bénéfice estimé</div><div class="profit-preview" id="form-profit-preview">—</div></div>
+      </div>
+      <button class="add-btn" onclick="addArticle()">＋ Ajouter l'article</button>
+    </div>
+  </div>
+  <div class="empty-state" id="empty-msg">Aucun article encore<br>📦 Ajoutez votre premier</div>
+  <div class="brands-list" id="brands-list"></div>
+  <div id="catalogue-stats" style="display:none;"><div class="card" style="margin:0 14px 14px;"><div class="card-title">📊 Statistiques catalogue</div><div class="mini-stat-grid" id="stats-grid"></div></div></div>
+  <div id="cat-totals" style="display:none;">
+    <div class="totals-strip">
+      <div class="total-cell"><div class="total-lbl">Articles</div><div class="total-val" id="cat-nb">0</div></div>
+      <div class="total-cell"><div class="total-lbl">Marques</div><div class="total-val" style="color:var(--accent2)" id="cat-brands">0</div></div>
+      <div class="total-cell"><div class="total-lbl">Coût achat</div><div class="total-val" style="color:var(--muted)" id="cat-cost">—</div></div>
+      <div class="total-cell"><div class="total-lbl">Bénéfice total</div><div class="total-val" id="cat-profit">—</div></div>
+    </div>
+    <div class="inject-row">
+      <div class="inject-btn" onclick="injectToBuy()">→ Injecter prix achat</div>
+      <div class="inject-btn cyan" onclick="injectToQty()">→ Injecter quantité</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ PAGE RECO ══════ -->
+<div class="page" id="page-reco">
+  <div class="section-head" style="padding-top:14px;"><h2>⭐ À privilégier</h2><p>Classés par bénéfice</p></div>
+  <div class="empty-state" id="reco-empty" style="display:none;">Ajoutez des articles vendus<br>avec prix d'achat + vente</div>
+  <div class="reco-list" id="reco-list"></div>
+  <div id="reco-stats-card" style="display:none;"><div class="card" style="margin:0 14px 14px;"><div class="card-title">Analyse globale</div><div class="mini-stat-grid" id="reco-stats-grid"></div></div></div>
+</div>
+
+<!-- ══════ PAGE STOCK ══════ -->
+<div class="page" id="page-stock">
+  <div class="form-card" style="margin-top:14px;">
+    <div class="form-card-header"><div class="form-card-title">📦 Ajouter au stock</div></div>
+    <div class="form-body">
+      <div class="photo-row">
+        <div class="photo-btn" id="stock-photo-btn" onclick="document.getElementById('stock-photo-input').click()">📷</div>
+        <input type="file" id="stock-photo-input" accept="image/*" style="display:none;" onchange="handleStockPhoto(event)">
+        <div class="photo-hint">Appuyer pour<br>ajouter une photo</div>
+      </div>
+      <div class="f-group"><div class="f-label">Nom de l'article</div><input class="f-input" type="text" id="stock-name" placeholder="ex : Veste en cuir" autocomplete="off"></div>
+      <div class="f-group"><div class="f-label">Marque</div><input class="f-input" type="text" id="stock-brand" placeholder="ex : Zara" autocomplete="off"></div>
+      <div class="two-col">
+        <div class="f-group"><div class="f-label buy">↓ Prix achat (€)</div><input class="f-input buy" type="number" id="stock-buy" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div>
+        <div class="f-group"><div class="f-label">Quantité</div><input class="f-input" type="number" id="stock-qty" placeholder="1" min="1" value="1" inputmode="numeric"></div>
+      </div>
+      <button class="add-btn" style="background:var(--accent2);color:#0a0a0f;" onclick="addToStock()">＋ Ajouter au stock</button>
+    </div>
+  </div>
+  <div class="empty-state" id="stock-empty">Aucun article en stock<br>📦 Ajoutez des articles ci-dessus</div>
+  <div class="brands-list" id="stock-list" style="display:none;"></div>
+  <div id="stock-totals" style="display:none;">
+    <div class="totals-strip">
+      <div class="total-cell"><div class="total-lbl">En stock</div><div class="total-val" id="stock-count">0</div></div>
+      <div class="total-cell"><div class="total-lbl">Coût total</div><div class="total-val" style="color:var(--muted)" id="stock-total-cost">—</div></div>
+      <div class="total-cell" style="grid-column:span 2;"><div class="total-lbl">Valeur estimée</div><div class="total-val" style="color:var(--accent)" id="stock-total-est">—</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-stats" onclick="switchPage('stats')"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></button>
+  <button class="nav-btn" id="nav-articles" onclick="switchPage('articles')"><span class="nav-icon">🗂</span><span class="nav-label">Vendus</span><span class="nav-badge" id="badge-articles" style="display:none;"></span></button>
+  <button class="nav-btn" id="nav-reco" onclick="switchPage('reco')"><span class="nav-icon">⭐</span><span class="nav-label">Reco</span></button>
+  <button class="nav-btn" id="nav-stock" onclick="switchPage('stock')"><span class="nav-icon">📦</span><span class="nav-label">Stock</span><span class="nav-badge" id="badge-stock" style="display:none;"></span></button>
+</nav>
+
+<!-- ══ FIREBASE SDK ══ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ╔══════════════════════════════════════════╗
+// ║  COLLE TA CONFIG FIREBASE ICI           ║
+// ║  (console.firebase.google.com)          ║
+// ╚══════════════════════════════════════════╝
+const firebaseConfig = {
+  apiKey:            "AIzaSyAD-bSm-nhtdqeGQ8rtUUkWffmELqwnskg",
+  authDomain:        "bbnbenef.firebaseapp.com",
+  projectId:         "bbnbenef",
+  storageBucket:     "bbnbenef.firebasestorage.app",
+  messagingSenderId: "196916408060",
+  appId:             "1:196916408060:web:6b0591cfcd847658adf179"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+let unsubscribe = null;
+let isSyncing   = false;
+
+// ── UI SYNC ──
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+// ── AUTH ──
+window.signInWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
+  try { await signInWithPopup(auth, provider); }
+  catch(e) { alert('Erreur connexion : ' + e.message); }
+};
+
+window.signOut = async () => {
+  if (!confirm('Se déconnecter ?')) return;
+  if (unsubscribe) unsubscribe();
+  await fbSignOut(auth);
+  document.getElementById('login-screen').classList.remove('hidden');
+  setSyncStatus('', 'Déconnecté');
+  document.getElementById('sync-user').textContent = '';
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('sync-user').textContent = user.email || user.displayName || '';
+    setSyncStatus('syncing', 'Chargement…');
+    startSync(user.uid);
+  } else {
+    document.getElementById('login-screen').classList.remove('hidden');
+    setSyncStatus('', 'Non connecté');
+    document.getElementById('sync-user').textContent = '';
+  }
+});
+
+// ── FIRESTORE SYNC ──
+function startSync(uid) {
+  if (unsubscribe) unsubscribe();
+  const ref = doc(db, 'users', uid, 'data', 'main');
+
+  // Écoute temps réel → mise à jour locale
+  unsubscribe = onSnapshot(ref, (snap) => {
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.articles)   { window._articles   = d.articles;   window.renderCatalogue(); }
+      if (d.stockItems) { window._stockItems  = d.stockItems; window.renderStock(); }
+    }
+    setSyncStatus('synced', 'Synchronisé');
+  }, () => {
+    setSyncStatus('error', 'Erreur sync');
+  });
+
+  // Expose la fonction de sauvegarde vers Firestore
+  window._saveToFirestore = async (payload) => {
+    if (isSyncing) return;
+    isSyncing = true;
+    setSyncStatus('syncing', 'Sauvegarde…');
+    try {
+      // On exclut les photos (trop lourdes pour Firestore) — elles restent en localStorage
+      const safe = {
+        articles:   payload.articles.map(a => ({ ...a, photo: a.photo ? '__local__' : null })),
+        stockItems: payload.stockItems.map(a => ({ ...a, photo: a.photo ? '__local__' : null })),
+        savedAt: new Date().toISOString()
+      };
+      await setDoc(ref, safe, { merge: true });
+      // Photos → localStorage séparé
+      try { localStorage.setItem('bbnbenef_photos', JSON.stringify({
+        articles:   payload.articles.map(a => ({ id: a.id, photo: a.photo })),
+        stockItems: payload.stockItems.map(a => ({ id: a.id, photo: a.photo }))
+      })); } catch(e) {}
+      setSyncStatus('synced', 'Synchronisé ✓');
+    } catch(e) {
+      setSyncStatus('error', 'Erreur sauvegarde');
+    }
+    isSyncing = false;
+  };
+}
+
+// Réinjecte les photos locales après sync Firestore
+window._rehydratePhotos = (items) => {
+  try {
+    const raw = localStorage.getItem('bbnbenef_photos');
+    if (!raw) return items;
+    const photos = JSON.parse(raw);
+    const allPhotos = [...(photos.articles||[]), ...(photos.stockItems||[])];
+    return items.map(item => {
+      if (item.photo === '__local__') {
+        const found = allPhotos.find(p => p.id === item.id);
+        return { ...item, photo: found ? found.photo : null };
+      }
+      return item;
+    });
+  } catch(e) { return items; }
+};
+
+</script>
+
+<script>
+// ══════════════════════════════════════════════
+// APP LOGIC
+// ══════════════════════════════════════════════
+function fmt(n,d=2){if(isNaN(n)||n===null)return'—';return n.toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fmtEur(n){if(isNaN(n)||n===null)return'—';return(n>=0?'+':'')+fmt(n)+' €';}
+function fmtEurAbs(n){if(isNaN(n)||n===null)return'—';return fmt(n)+' €';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Données globales (accessibles par Firebase module)
+window._articles  = [];
+window._stockItems = [];
+Object.defineProperty(window,'articles',{get:()=>window._articles,set:v=>{window._articles=v;}});
+Object.defineProperty(window,'stockItems',{get:()=>window._stockItems,set:v=>{window._stockItems=v;}});
+
+let currentMode='article', currentLotId=null;
+let pendingArtPhoto=null, pendingStockPhoto=null, pendingSellId=null;
+
+function autoSave(){
+  if(window._saveToFirestore){
+    window._saveToFirestore({articles:window._articles, stockItems:window._stockItems});
+  }
+}
+
+// ── NAV ──
+function switchPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if(name==='reco') renderReco();
+  if(name==='stock') renderStock();
+}
+
+// ── BADGES ──
+function updateBadges(){
+  const ba=document.getElementById('badge-articles'),bs=document.getElementById('badge-stock');
+  const al=window._articles.length,sl=window._stockItems.length;
+  if(al>0){ba.style.display='';ba.textContent=al;}else ba.style.display='none';
+  if(sl>0){bs.style.display='';bs.textContent=sl;}else bs.style.display='none';
+}
+
+// ── PHOTOS ──
+function handleArtPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{pendingArtPhoto=ev.target.result;document.getElementById('art-photo-btn').innerHTML=`<img src="${pendingArtPhoto}">`;};r.readAsDataURL(f);e.target.value='';}
+function handleStockPhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{pendingStockPhoto=ev.target.result;document.getElementById('stock-photo-btn').innerHTML=`<img src="${pendingStockPhoto}">`;};r.readAsDataURL(f);e.target.value='';}
+
+// ── MODE LOT ──
+function setMode(mode){currentMode=mode;document.getElementById('btn-article').classList.toggle('active',mode==='article');document.getElementById('btn-lot').classList.toggle('active',mode==='lot');document.getElementById('lot-banner').style.display=mode==='lot'?'block':'none';if(mode==='lot'&&!currentLotId)currentLotId='lot_'+Date.now();if(mode==='article')currentLotId=null;}
+
+// ── FORM PROFIT ──
+function updateFormProfit(){const buy=parseFloat(document.getElementById('art-buy').value),sell=parseFloat(document.getElementById('art-sell').value),qty=parseInt(document.getElementById('art-qty').value)||1,pp=document.getElementById('form-profit-preview');if(!isNaN(buy)&&!isNaN(sell)){const p=(sell-buy)*qty;pp.textContent=fmtEur(p);pp.style.color=p>0?'var(--accent)':p<0?'var(--loss)':'var(--muted)';}else{pp.textContent='—';pp.style.color='var(--muted)';}}
+
+// ── HIGHLIGHT ──
+function highlightField(id){const el=document.getElementById(id);el.style.borderColor='rgba(245,66,66,.6)';el.focus();setTimeout(()=>{el.style.borderColor='';},1200);}
+
+// ── ADD ARTICLE ──
+function addArticle(){
+  const name=document.getElementById('art-name').value.trim();
+  const brand=document.getElementById('art-brand').value.trim();
+  const buyP=parseFloat(document.getElementById('art-buy').value);
+  const sellP=parseFloat(document.getElementById('art-sell').value);
+  const qty=Math.max(1,parseInt(document.getElementById('art-qty').value)||1);
+  if(!name){highlightField('art-name');return;}
+  if(!brand){highlightField('art-brand');return;}
+  if(isNaN(buyP)||buyP<0){highlightField('art-buy');return;}
+  const lotId=currentMode==='lot'?(currentLotId||(currentLotId='lot_'+Date.now())):null;
+  window._articles.push({id:Date.now(),name,brand,buyPrice:buyP,sellPrice:isNaN(sellP)?null:sellP,qty,type:currentMode,lotId,photo:pendingArtPhoto||null});
+  document.getElementById('art-name').value='';document.getElementById('art-buy').value='';document.getElementById('art-sell').value='';document.getElementById('art-qty').value='1';
+  document.getElementById('form-profit-preview').textContent='—';document.getElementById('form-profit-preview').style.color='var(--muted)';
+  document.getElementById('art-photo-btn').innerHTML='📷';document.getElementById('art-photo-input').value='';pendingArtPhoto=null;
+  renderCatalogue();autoSave();
+}
+function deleteArticle(id){window._articles=window._articles.filter(a=>a.id!==id);renderCatalogue();autoSave();}
+
+// ── STATS ──
+function getArticleStats(){const ws=window._articles.filter(a=>a.sellPrice!==null&&a.buyPrice>0);if(!ws.length)return null;const profits=ws.map(a=>({...a,profit:(a.sellPrice-a.buyPrice)*a.qty,roi:((a.sellPrice-a.buyPrice)/a.buyPrice)*100}));const avgSell=ws.reduce((s,a)=>s+a.sellPrice,0)/ws.length,avgBuy=ws.reduce((s,a)=>s+a.buyPrice,0)/ws.length,avgP=profits.reduce((s,a)=>s+a.profit,0)/profits.length,avgRoi=profits.reduce((s,a)=>s+a.roi,0)/profits.length,maxP=Math.max(...profits.map(a=>a.profit)),maxArt=profits.find(a=>a.profit===maxP),total=profits.reduce((s,a)=>s+a.profit,0);return{avgSellPrice:avgSell,avgBuyPrice:avgBuy,avgProfit:avgP,avgRoi,maxProfit:maxP,maxProfitArticle:maxArt,totalProfit:total,count:ws.length};}
+function evalResale(a,stats){if(a.sellPrice===null||a.buyPrice<=0)return{cls:'rv-none',label:'— Sans prix vente'};const profit=(a.sellPrice-a.buyPrice)*a.qty,roi=((a.sellPrice-a.buyPrice)/a.buyPrice)*100;if(!stats||stats.count<2){if(roi>=50)return{cls:'rv-good',label:'✓ Bonne revente'};if(roi>=20)return{cls:'rv-ok',label:'◎ Correcte'};if(roi>0)return{cls:'rv-low',label:'● Faible marge'};return{cls:'rv-bad',label:'✗ Déficitaire'};}if(profit>=stats.maxProfit&&profit>0&&stats.count>1)return{cls:'rv-record',label:'★ Record'};const vsAvg=stats.avgProfit>0?(profit/stats.avgProfit):0;if(profit<0)return{cls:'rv-bad',label:'✗ Déficitaire'};if(vsAvg>=1.3)return{cls:'rv-good',label:'✓ Au-dessus moy.'};if(vsAvg>=0.8)return{cls:'rv-ok',label:'◎ Dans la moy.'};if(profit>0)return{cls:'rv-low',label:'● Sous la moy.'};return{cls:'rv-bad',label:'✗ Déficitaire'};}
+
+// ── BRAND COLORS ──
+const BRAND_COLORS=['#c8f542','#42f5c8','#f542a8','#f5a042','#4287f5','#f5e642','#a842f5','#42f5a8','#f56042','#42c8f5'];
+const bColorMap={};let bColorIdx=0;
+function getBrandColor(b){const k=b.trim().toLowerCase();if(!bColorMap[k]){bColorMap[k]=BRAND_COLORS[bColorIdx%BRAND_COLORS.length];bColorIdx++;}return bColorMap[k];}
+
+// ── RENDER CATALOGUE ──
+window.renderCatalogue=function(){
+  const list=document.getElementById('brands-list'),empty=document.getElementById('empty-msg'),totals=document.getElementById('cat-totals'),statsP=document.getElementById('catalogue-stats');
+  const arts=window._articles;
+  if(!arts.length){empty.style.display='block';list.innerHTML='';totals.style.display='none';statsP.style.display='none';updateBadges();return;}
+  empty.style.display='none';totals.style.display='block';
+  const stats=getArticleStats();
+  const groups={};arts.forEach(a=>{const k=a.brand.trim().toLowerCase();if(!groups[k])groups[k]={label:a.brand,items:[]};groups[k].items.push(a);});
+  list.innerHTML='';
+  Object.values(groups).forEach(g=>{
+    const col=getBrandColor(g.label);
+    const cost=g.items.reduce((s,a)=>s+a.buyPrice*a.qty,0),pft=g.items.reduce((s,a)=>s+(a.sellPrice!==null?(a.sellPrice-a.buyPrice)*a.qty:0),0),qty=g.items.reduce((s,a)=>s+a.qty,0);
+    const pftColor=pft>0?'var(--accent)':pft<0?'var(--loss)':'var(--muted)';
+    const rows=g.items.map(a=>{
+      const rs=evalResale(a,stats),ppu=a.sellPrice!==null?(a.sellPrice-a.buyPrice)*a.qty:null;
+      const ph=a.photo&&a.photo!=='__local__'?`<div class="art-thumb"><img src="${a.photo}"></div>`:`<div class="art-thumb">🏷</div>`;
+      const tag=a.type==='lot'?`<span class="art-tag tag-l">Lot</span>`:`<span class="art-tag tag-a">Art.</span>`;
+      return `<div class="art-row">${ph}<div class="art-info"><div class="art-name">${esc(a.name)}${tag}</div><div class="art-prices"><span class="art-buy-price">${fmtEurAbs(a.buyPrice)}</span>${a.sellPrice!==null?`<span>→</span><span class="art-sell-price">${fmtEurAbs(a.sellPrice)}</span>`:'<span>— vente</span>'} · ${a.qty} u.</div></div><div class="art-right">${ppu!==null?`<span class="art-profit" style="color:${ppu>0?'var(--accent)':ppu<0?'var(--loss)':'var(--muted)'}">${fmtEur(ppu)}</span>`:''}<span class="revente-badge ${rs.cls}">${rs.label}</span><button class="del-btn" onclick="deleteArticle(${a.id})">✕</button></div></div>`;
+    }).join('');
+    const div=document.createElement('div');div.className='brand-group';
+    div.innerHTML=`<div class="brand-hdr" onclick="this.closest('.brand-group').classList.toggle('collapsed')"><div class="brand-name-wrap"><div class="brand-dot" style="background:${col}"></div>${esc(g.label)}</div><div style="display:flex;align-items:center;gap:6px;"><div class="brand-meta">${qty} u. · ${fmtEurAbs(cost)}<br><span style="color:${pftColor}">${fmtEur(pft)}</span></div><div class="brand-chevron">▼</div></div></div><div class="brand-body">${rows}</div>`;
+    list.appendChild(div);
+  });
+  if(stats){statsP.style.display='block';const ra=stats.maxProfitArticle;document.getElementById('stats-grid').innerHTML=`<div class="mini-stat"><div class="ms-lbl">Moy. vente</div><div class="ms-val" style="color:var(--accent2)">${fmtEurAbs(stats.avgSellPrice)}</div></div><div class="mini-stat"><div class="ms-lbl">Moy. achat</div><div class="ms-val" style="color:var(--muted)">${fmtEurAbs(stats.avgBuyPrice)}</div></div><div class="mini-stat"><div class="ms-lbl">Moy. bénéfice</div><div class="ms-val" style="color:${stats.avgProfit>=0?'var(--accent)':'var(--loss)'}">${fmtEur(stats.avgProfit)}</div></div><div class="mini-stat"><div class="ms-lbl">ROI moyen</div><div class="ms-val" style="color:var(--accent2)">${fmt(stats.avgRoi,1)}%</div></div><div class="mini-stat gold-hi" style="grid-column:span 2"><div class="ms-lbl">★ Record</div><div class="ms-val" style="color:var(--gold)">${fmtEur(stats.maxProfit)}</div><div class="ms-sub" style="color:var(--gold)">${ra?esc(ra.name):'—'}</div></div>`;}else statsP.style.display='none';
+  const totalCost=arts.reduce((s,a)=>s+a.buyPrice*a.qty,0),totalProfit=arts.reduce((s,a)=>s+(a.sellPrice!==null?(a.sellPrice-a.buyPrice)*a.qty:0),0);
+  document.getElementById('cat-nb').textContent=arts.reduce((s,a)=>s+a.qty,0);
+  document.getElementById('cat-brands').textContent=new Set(arts.map(a=>a.brand.trim().toLowerCase())).size;
+  document.getElementById('cat-cost').textContent=fmtEurAbs(totalCost);
+  const pe=document.getElementById('cat-profit');pe.textContent=arts.some(a=>a.sellPrice!==null)?fmtEur(totalProfit):'—';pe.style.color=totalProfit>0?'var(--accent)':totalProfit<0?'var(--loss)':'var(--muted)';
+  updateBadges();
+};
+
+// ── RECO ──
+function renderReco(){const list=document.getElementById('reco-list'),empty=document.getElementById('reco-empty'),sc=document.getElementById('reco-stats-card'),ws=window._articles.filter(a=>a.sellPrice!==null&&a.buyPrice>0);if(!ws.length){empty.style.display='block';list.innerHTML='';sc.style.display='none';return;}empty.style.display='none';sc.style.display='block';const sorted=[...ws].map(a=>({...a,profit:(a.sellPrice-a.buyPrice)*a.qty,roi:((a.sellPrice-a.buyPrice)/a.buyPrice)*100})).sort((a,b)=>b.profit-a.profit);const medals=['🥇','🥈','🥉'];list.innerHTML=sorted.slice(0,9).map((a,i)=>{const isTop=i<3,th=a.photo&&a.photo!=='__local__'?`<div class="reco-thumb"><img src="${a.photo}"></div>`:`<div class="reco-thumb">🏷</div>`,rc=a.roi>=50?'var(--accent)':a.roi>=20?'var(--accent2)':a.roi>0?'#f5a042':'var(--loss)';return`<div class="reco-item ${isTop?'top3':''}"><div class="reco-rank">${medals[i]||'#'+(i+1)}</div>${th}<div class="reco-info"><div class="reco-name">${esc(a.name)}</div><div class="reco-brand">${esc(a.brand)}</div><div class="reco-prices">${fmtEurAbs(a.buyPrice)} → ${fmtEurAbs(a.sellPrice)} · ${a.qty} u.</div></div><div class="reco-nums"><div class="reco-profit" style="color:${a.profit>0?'var(--accent)':'var(--loss)'}">${fmtEur(a.profit)}</div><div class="reco-roi" style="color:${rc}">ROI ${fmt(a.roi,1)}%</div></div></div>`;}).join('');const avgRoi=sorted.reduce((s,a)=>s+a.roi,0)/sorted.length,bestROI=sorted.reduce((best,a)=>a.roi>best.roi?a:best,sorted[0]);document.getElementById('reco-stats-grid').innerHTML=`<div class="mini-stat"><div class="ms-lbl">Meilleur bénéf.</div><div class="ms-val" style="color:var(--accent)">${fmtEur(sorted[0].profit)}</div><div class="ms-sub">${esc(sorted[0].name)}</div></div><div class="mini-stat"><div class="ms-lbl">Meilleur ROI</div><div class="ms-val" style="color:var(--accent2)">${fmt(bestROI.roi,1)}%</div><div class="ms-sub">${esc(bestROI.name)}</div></div><div class="mini-stat"><div class="ms-lbl">ROI moyen</div><div class="ms-val">${fmt(avgRoi,1)}%</div></div><div class="mini-stat"><div class="ms-lbl">Analysés</div><div class="ms-val">${sorted.length}</div></div>`;}
+
+// ── STOCK ──
+function addToStock(){const name=document.getElementById('stock-name').value.trim(),brand=document.getElementById('stock-brand').value.trim(),buyP=parseFloat(document.getElementById('stock-buy').value),qty=Math.max(1,parseInt(document.getElementById('stock-qty').value)||1);if(!name){highlightField('stock-name');return;}if(!brand){highlightField('stock-brand');return;}if(isNaN(buyP)||buyP<0){highlightField('stock-buy');return;}window._stockItems.push({id:Date.now(),name,brand,buyPrice:buyP,qty,photo:pendingStockPhoto||null,addedAt:new Date().toISOString()});document.getElementById('stock-name').value='';document.getElementById('stock-brand').value='';document.getElementById('stock-buy').value='';document.getElementById('stock-qty').value='1';document.getElementById('stock-photo-btn').innerHTML='📷';document.getElementById('stock-photo-input').value='';pendingStockPhoto=null;renderStock();autoSave();}
+window.renderStock=function(){const list=document.getElementById('stock-list'),empty=document.getElementById('stock-empty'),totals=document.getElementById('stock-totals'),items=window._stockItems;if(!items.length){empty.style.display='block';list.style.display='none';totals.style.display='none';updateBadges();return;}empty.style.display='none';list.style.display='flex';totals.style.display='block';const stats=getArticleStats(),em=stats&&stats.avgRoi>0?1+(stats.avgRoi/100):null,groups={};items.forEach(a=>{const k=a.brand.trim().toLowerCase();if(!groups[k])groups[k]={label:a.brand,items:[]};groups[k].items.push(a);});list.innerHTML='';Object.values(groups).forEach(g=>{const col=getBrandColor(g.label),qty=g.items.reduce((s,a)=>s+a.qty,0),cost=g.items.reduce((s,a)=>s+a.buyPrice*a.qty,0),rows=g.items.map(a=>{const th=a.photo&&a.photo!=='__local__'?`<div class="stock-thumb"><img src="${a.photo}"></div>`:`<div class="stock-thumb">📦</div>`,est=em?a.buyPrice*em:null;return`<div class="stock-row">${th}<div class="stock-info"><div class="stock-name">${esc(a.name)}</div><div class="stock-meta">${esc(a.brand)} · ${fmtEurAbs(a.buyPrice)} · ${a.qty} u.${est?` · ≈${fmtEurAbs(est)}`:''}</div></div><div class="stock-actions"><button class="sold-btn" onclick="openSellModal(${a.id})">✓ Vendu</button><button class="del-btn" onclick="deleteStockItem(${a.id})">✕</button></div></div>`;}).join('');const div=document.createElement('div');div.className='brand-group';div.innerHTML=`<div class="brand-hdr" onclick="this.closest('.brand-group').classList.toggle('collapsed')"><div class="brand-name-wrap"><div class="brand-dot" style="background:${col}"></div>${esc(g.label)}</div><div style="display:flex;align-items:center;gap:6px;"><div class="brand-meta">${qty} u. · ${fmtEurAbs(cost)}</div><div class="brand-chevron">▼</div></div></div><div class="brand-body">${rows}</div>`;list.appendChild(div);});const tc=items.reduce((s,a)=>s+a.buyPrice*a.qty,0),te=em?items.reduce((s,a)=>s+a.buyPrice*em*a.qty,0):null;document.getElementById('stock-count').textContent=items.reduce((s,a)=>s+a.qty,0);document.getElementById('stock-total-cost').textContent=fmtEurAbs(tc);document.getElementById('stock-total-est').textContent=te?fmtEurAbs(te):'—';updateBadges();};
+function deleteStockItem(id){window._stockItems=window._stockItems.filter(a=>a.id!==id);renderStock();autoSave();}
+
+// ── MODAL ──
+function openSellModal(id){const item=window._stockItems.find(a=>a.id===id);if(!item)return;pendingSellId=id;document.getElementById('modal-item-name').textContent=item.name+' · '+item.brand+' (achat: '+fmtEurAbs(item.buyPrice)+')';document.getElementById('modal-sell-price').value='';document.getElementById('sell-modal').classList.add('open');setTimeout(()=>document.getElementById('modal-sell-price').focus(),200);}
+function closeModal(){document.getElementById('sell-modal').classList.remove('open');pendingSellId=null;}
+function confirmSell(){const sp=parseFloat(document.getElementById('modal-sell-price').value);if(isNaN(sp)||sp<0){document.getElementById('modal-sell-price').style.borderColor='rgba(245,66,66,.6)';setTimeout(()=>document.getElementById('modal-sell-price').style.borderColor='',1200);return;}const item=window._stockItems.find(a=>a.id===pendingSellId);if(!item){closeModal();return;}window._stockItems=window._stockItems.filter(a=>a.id!==pendingSellId);window._articles.push({id:Date.now(),name:item.name,brand:item.brand,buyPrice:item.buyPrice,sellPrice:sp,qty:item.qty,type:'article',lotId:null,photo:item.photo||null});closeModal();renderStock();renderCatalogue();autoSave();}
+document.getElementById('sell-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// ── CALCULATEUR ──
+function calculate(){const buy=parseFloat(document.getElementById('buyPrice').value)||0,sell=parseFloat(document.getElementById('sellPrice').value)||0,qty=Math.max(1,parseFloat(document.getElementById('quantity').value)||1),tvaPct=parseFloat(document.getElementById('tva').value)||0,fees=parseFloat(document.getElementById('fees').value)||0,has=buy>0||sell>0,tvaAmt=sell*(tvaPct/(100+tvaPct)),sellHT=sell-tvaAmt,fpu=qty>0?fees/qty:0,ppu=sellHT-buy-fpu,totRev=sell*qty,totCst=(buy+fpu)*qty,totPft=ppu*qty,totTva=tvaAmt*qty,margin=sellHT>0?(ppu/sellHT)*100:0,coeff=buy>0?sell/buy:0,roi=(buy+fpu)>0?(ppu/(buy+fpu))*100:0,be=ppu>0&&fees>0?Math.ceil(fees/ppu):(fees>0?'∞':'—');if(!has){['kpi-profit','kpi-revenue','kpi-cost','kpi-tva','bar-pct'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('bar-fill').style.width='0%';document.getElementById('bar-status').textContent='—';['b-sellht','b-buy','b-fees','b-profit','b-tva','score-coeff','score-breakeven','score-roi'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('score-rentabilite').className='pill neutral';document.getElementById('score-rentabilite').textContent='—';document.getElementById('score-status').className='pill neutral';document.getElementById('score-status').textContent='—';updateSimTable(null,null,null,null,null,null,null);return;}const pe=document.getElementById('kpi-profit');pe.textContent=fmtEur(totPft);pe.className='kpi-val '+(totPft>0?'green':totPft<0?'red':'white');document.getElementById('card-profit').className='kpi-cell '+(totPft>0?'hi-green':totPft<0?'hi-red':'');document.getElementById('kpi-profit-unit').textContent=qty>1?`${fmtEur(ppu)} × ${qty} u.`:'par unité';document.getElementById('kpi-revenue').textContent=fmtEurAbs(totRev);document.getElementById('kpi-revenue-sub').textContent=qty>1?`${qty} × ${fmtEurAbs(sell)}`:'prix de vente TTC';document.getElementById('kpi-cost').textContent=fmtEurAbs(totCst);document.getElementById('kpi-cost-sub').textContent=fees>0?`achat + ${fmtEurAbs(fees)} frais`:'coût total achat';document.getElementById('kpi-tva').textContent=fmtEurAbs(totTva);document.getElementById('kpi-tva-sub').textContent=tvaPct>0?`TVA ${tvaPct}%`:'TVA non applicable';const cl=Math.max(0,Math.min(100,margin)),fe=document.getElementById('bar-fill');document.getElementById('bar-pct').textContent=fmt(margin,1)+'%';document.getElementById('bar-pct').style.color=margin>0?'var(--accent)':'var(--loss)';fe.style.width=cl+'%';if(margin<0){fe.style.background='var(--loss)';document.getElementById('bar-status').textContent='⚠ Opération déficitaire';}else if(margin<15){fe.style.background='#f5a042';document.getElementById('bar-status').textContent='● Marge faible';}else if(margin<40){fe.style.background='var(--accent2)';document.getElementById('bar-status').textContent='✓ Bonne marge';}else{fe.style.background='var(--accent)';document.getElementById('bar-status').textContent='★ Excellente marge !';}document.getElementById('b-sellht').textContent=fmtEurAbs(sellHT);document.getElementById('b-buy').textContent=fmtEurAbs(buy);document.getElementById('b-fees').textContent=fpu>0?fmtEurAbs(fpu):'—';const bp=document.getElementById('b-profit');bp.textContent=fmtEur(ppu);bp.style.color=ppu>=0?'var(--accent)':'var(--loss)';document.getElementById('b-tva').textContent=tvaPct>0?fmtEurAbs(tvaAmt):'—';const rr=document.getElementById('score-rentabilite');if(margin<0){rr.className='pill bad';rr.textContent='✗ Perte';}else if(margin<10){rr.className='pill bad';rr.textContent='⚠ Insuffisante';}else if(margin<25){rr.className='pill neutral';rr.textContent='◎ Correcte';}else{rr.className='pill good';rr.textContent='✓ Bonne';}document.getElementById('score-coeff').textContent=coeff>0?'x'+fmt(coeff,2):'—';document.getElementById('score-breakeven').textContent=typeof be==='number'?be+' u.':be;document.getElementById('score-roi').textContent=roi!==0?fmt(roi,1)+'%':'—';const ss=document.getElementById('score-status');if(totPft>0){ss.className='pill good';ss.textContent='✓ Rentable';}else if(totPft===0){ss.className='pill neutral';ss.textContent='◎ Équilibré';}else{ss.className='pill bad';ss.textContent='✗ Déficitaire';}updateSimTable(buy,sell,sellHT,tvaAmt,tvaPct,fees,qty);}
+
+function updateSimTable(buy,sell,sellHT,tvaAmt,tvaPct,fees,cqty){const tb=document.getElementById('sim-body');if(buy===null){tb.innerHTML='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px;font-family:DM Mono,monospace;font-size:10px;">Entrez vos prix</td></tr>';return;}const qs=[1,5,10,25,50,100,250,500];tb.innerHTML=qs.map(q=>{const fpq=q>0?fees/q:0,ppu=sellHT-buy-fpq,rev=sell*q,cost=(buy+fpq)*q,pft=ppu*q,mg=sellHT>0?(ppu/sellHT)*100:0,isc=q===Math.round(cqty),pc=pft>0?'color:var(--profit)':pft<0?'color:var(--loss)':'color:var(--muted)';return`<tr class="${isc?'cur':''}"><td style="color:var(--muted);font-family:'DM Mono',monospace;">${isc?'▶ ':''}${q}</td><td style="font-weight:600;">${fmt(rev)} €</td><td style="color:var(--muted)">${fmt(cost)} €</td><td style="font-weight:700;${pc}">${fmtEur(pft)}</td><td style="${pc}">${fmt(mg,1)}%</td></tr>`;}).join('');}
+
+function injectToBuy(){const t=window._articles.reduce((s,a)=>s+a.buyPrice*a.qty,0);if(t>0){document.getElementById('buyPrice').value=t.toFixed(2);calculate();switchPage('stats');}}
+function injectToQty(){const t=window._articles.reduce((s,a)=>s+a.qty,0);if(t>0){document.getElementById('quantity').value=t;calculate();switchPage('stats');}}
+
+calculate();
+</script>
+</body>
+</html>
