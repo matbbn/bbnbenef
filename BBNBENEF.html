@@ -505,6 +505,8 @@ const app  = initializeApp(firebaseConfig);
 // Handle redirect result on page load
 getRedirectResult(getAuth(initializeApp(firebaseConfig))).catch(() => {});
 const auth = getAuth(app);
+// Handle redirect on page load (mobile)
+getRedirectResult(auth).then(r => { if(r) console.log('Redirect login:', r.user.email); }).catch(() => {});
 const db   = getFirestore(app);
 
 let unsubscribe = null;
@@ -521,7 +523,11 @@ function setSyncStatus(state, label) {
 // ── AUTH ──
 window.signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  try { await signInWithPopup(auth, provider); }
+  try {
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (isMobile) { await signInWithRedirect(auth, provider); }
+    else { await signInWithPopup(auth, provider); }
+  }
   catch(e) { alert('Erreur connexion : ' + e.message); }
 };
 
@@ -552,22 +558,25 @@ function startSync(uid) {
   if (unsubscribe) unsubscribe();
   const ref = doc(db, 'users', uid, 'data', 'main');
 
-  // Écoute temps réel → mise à jour locale
-  // Créer le document si inexistant
-  setDoc(ref, { articles: [], stockItems: [], savedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
-
-  unsubscribe = onSnapshot(ref, (snap) => {
-    if (snap.exists()) {
-      const d = snap.data();
-      if (d.articles)   { window._articles   = d.articles;   window.renderCatalogue(); }
-      if (d.stockItems) { window._stockItems  = d.stockItems; window.renderStock(); }
-    }
-    setSyncStatus('synced', 'Synchronisé');
-  }, (err) => {
-    console.error('Firestore:', err.code, err.message);
-    setSyncStatus('error', 'Err: ' + err.code);
-
-  });
+  // Forcer le refresh du token puis démarrer Firestore
+  auth.currentUser.getIdToken(true).then(() => {
+    // Init le document si nouveau compte
+    setDoc(ref, { articles: [], stockItems: [], savedAt: new Date().toISOString() }, { merge: true })
+      .then(() => {
+        // Écoute temps réel
+        unsubscribe = onSnapshot(ref, (snap) => {
+          if (snap.exists()) {
+            const d = snap.data();
+            if (d.articles)   { window._articles   = d.articles;   window.renderCatalogue(); }
+            if (d.stockItems) { window._stockItems  = d.stockItems; window.renderStock(); }
+          }
+          setSyncStatus('synced', 'Synchronisé ✓');
+        }, (err) => {
+          setSyncStatus('error', 'Err: ' + err.code);
+        });
+      })
+      .catch(err => setSyncStatus('error', 'Init: ' + err.code));
+  }).catch(err => setSyncStatus('error', 'Token: ' + err.code));
 
   // Expose la fonction de sauvegarde vers Firestore
   window._saveToFirestore = async (payload) => {
