@@ -551,6 +551,9 @@ function startSync(uid) {
   const ref = doc(db, 'users', uid, 'data', 'main');
 
   // Écoute temps réel → mise à jour locale
+  // Créer le document si inexistant
+  setDoc(ref, { articles: [], stockItems: [], savedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+
   unsubscribe = onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       const d = snap.data();
@@ -558,8 +561,10 @@ function startSync(uid) {
       if (d.stockItems) { window._stockItems  = d.stockItems; window.renderStock(); }
     }
     setSyncStatus('synced', 'Synchronisé');
-  }, () => {
-    setSyncStatus('error', 'Erreur sync');
+  }, (err) => {
+    console.error('Firestore:', err.code, err.message);
+    setSyncStatus('error', 'Err: ' + err.code);
+
   });
 
   // Expose la fonction de sauvegarde vers Firestore
